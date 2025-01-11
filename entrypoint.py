@@ -28,10 +28,21 @@ def record_engine_temperature():
     logger.info(f"engine temperature list now contains these values: {engine_temperature_values}")
 
     logger.info(f"record request successful")
-    return 200, {"success": True}
+    return {"success": True}, 200
 
 
-# practically identical to the above
 @app.route('/collect', methods=['POST'])
 def collect_engine_temperature():
-    return 200, {"success": True}
+    database = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+    engine_temperature_values = database.lrange(DATA_KEY, 0, -1)
+    
+    if not engine_temperature_values:
+        return {"error": "No data available"}, 404
+
+    current_engine_temperature = float(engine_temperature_values[0])
+    average_engine_temperature = sum(map(float, engine_temperature_values)) / len(engine_temperature_values)
+
+    return {
+        "current_engine_temperature": current_engine_temperature,
+        "average_engine_temperature": average_engine_temperature
+    }, 200
